@@ -3,7 +3,7 @@ import { TenantService } from './tenant.service';
 import { ChildService } from './child.service';
 import { PaymentService } from './payment.service';
 import { GoogleSheetsIntegration } from '../integrations/google-sheets.integration';
-import { WhatsAppClient } from '../integrations/whatsapp.client';
+import { WhatsAppProvider } from '../integrations/whatsapp.client';
 import { logger } from '../lib';
 import { AppError, ParseError, ChildNotFoundError, TransactionResult } from '../domain';
 
@@ -13,7 +13,7 @@ export class MessageHandlerService {
     private readonly tenantService: TenantService,
     private readonly childService: ChildService,
     private readonly paymentService: PaymentService,
-    private readonly whatsapp: WhatsAppClient,
+    private readonly whatsapp: WhatsAppProvider,
     private readonly sheets: GoogleSheetsIntegration | null,
   ) {}
 

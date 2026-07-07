@@ -9,12 +9,11 @@ import {
 } from './repositories';
 import { MessageParser } from './parsers';
 import { TenantService, ChildService, PaymentService, MessageHandlerService } from './services';
-import { WhatsAppClient, GoogleSheetsIntegration } from './integrations';
+import { TwilioWhatsAppClient, GoogleSheetsIntegration } from './integrations';
 import { WebhookController, HealthController } from './controllers';
 
 export interface AppContainer {
   prisma: PrismaClient;
-  whatsappClient: WhatsAppClient;
   sheetsIntegration: GoogleSheetsIntegration | null;
   messageHandler: MessageHandlerService;
   webhookController: WebhookController;
@@ -35,10 +34,10 @@ export function createContainer(): AppContainer {
   const childService = new ChildService(childRepo);
   const paymentService = new PaymentService(prisma, paymentRepo, balanceRepo);
 
-  const whatsappClient = new WhatsAppClient(
-    env.WHATSAPP_API_URL,
-    env.WHATSAPP_PHONE_NUMBER_ID,
-    env.WHATSAPP_ACCESS_TOKEN,
+  const whatsappClient = new TwilioWhatsAppClient(
+    env.TWILIO_ACCOUNT_SID,
+    env.TWILIO_AUTH_TOKEN,
+    env.TWILIO_WHATSAPP_NUMBER,
   );
 
   let sheetsIntegration: GoogleSheetsIntegration | null = null;
@@ -58,12 +57,11 @@ export function createContainer(): AppContainer {
     sheetsIntegration,
   );
 
-  const webhookController = new WebhookController(messageHandler, whatsappClient);
+  const webhookController = new WebhookController(messageHandler);
   const healthController = new HealthController();
 
   return {
     prisma,
-    whatsappClient,
     sheetsIntegration,
     messageHandler,
     webhookController,

@@ -36,38 +36,6 @@ export interface ParsedMessage {
   notes?: string;
 }
 
-export interface WhatsAppIncomingMessage {
-  from: string;
-  id: string;
-  timestamp: string;
-  type: string;
-  text?: {
-    body: string;
-  };
-}
-
-export interface WhatsAppWebhookPayload {
-  object: string;
-  entry: Array<{
-    id: string;
-    changes: Array<{
-      value: {
-        messaging_product: string;
-        metadata: {
-          display_phone_number: string;
-          phone_number_id: string;
-        };
-        contacts?: Array<{
-          profile: { name: string };
-          wa_id: string;
-        }>;
-        messages?: WhatsAppIncomingMessage[];
-      };
-      field: string;
-    }>;
-  }>;
-}
-
 export interface TransactionResult {
   paymentId: string;
   childName: string;

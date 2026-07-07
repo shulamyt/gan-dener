@@ -11,13 +11,11 @@ services:
         value: "3000"
       - key: DATABASE_URL
         sync: false
-      - key: WHATSAPP_API_URL
-        value: https://graph.facebook.com/v21.0
-      - key: WHATSAPP_PHONE_NUMBER_ID
+      - key: TWILIO_ACCOUNT_SID
         sync: false
-      - key: WHATSAPP_ACCESS_TOKEN
+      - key: TWILIO_AUTH_TOKEN
         sync: false
-      - key: WHATSAPP_VERIFY_TOKEN
+      - key: TWILIO_WHATSAPP_NUMBER
         sync: false
       - key: LOG_LEVEL
         value: info

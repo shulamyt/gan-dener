@@ -1,47 +1,34 @@
-import axios, { AxiosInstance } from 'axios';
+import twilio from 'twilio';
 import { logger } from '../lib';
 
-export class WhatsAppClient {
-  private readonly http: AxiosInstance;
+export interface WhatsAppProvider {
+  sendMessage(to: string, text: string): Promise<void>;
+}
 
-  constructor(apiUrl: string, phoneNumberId: string, accessToken: string) {
-    this.http = axios.create({
-      baseURL: `${apiUrl}/${phoneNumberId}`,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+export class TwilioWhatsAppClient implements WhatsAppProvider {
+  private readonly client: ReturnType<typeof twilio>;
+  private readonly fromNumber: string;
+
+  constructor(accountSid: string, authToken: string, fromNumber: string) {
+    this.client = twilio(accountSid, authToken);
+    this.fromNumber = fromNumber;
   }
 
   async sendMessage(to: string, text: string): Promise<void> {
+    const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:+${to.replace(/\D/g, '')}`;
     try {
-      await this.http.post('/messages', {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to,
-        type: 'text',
-        text: { preview_url: false, body: text },
+      await this.client.messages.create({
+        body: text,
+        from: `whatsapp:${this.fromNumber}`,
+        to: toFormatted,
       });
-      logger.debug('WhatsApp message sent', { to });
+      logger.debug('WhatsApp message sent via Twilio', { to });
     } catch (error) {
       logger.error('Failed to send WhatsApp message', {
         to,
         error: error instanceof Error ? error.message : error,
       });
       throw error;
-    }
-  }
-
-  async markAsRead(messageId: string): Promise<void> {
-    try {
-      await this.http.post('/messages', {
-        messaging_product: 'whatsapp',
-        status: 'read',
-        message_id: messageId,
-      });
-    } catch (_error) {
-      logger.warn('Failed to mark message as read', { messageId });
     }
   }
 }

@@ -9,10 +9,9 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().url(),
 
-  WHATSAPP_API_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
-  WHATSAPP_PHONE_NUMBER_ID: z.string().min(1),
-  WHATSAPP_ACCESS_TOKEN: z.string().min(1),
-  WHATSAPP_VERIFY_TOKEN: z.string().min(1),
+  TWILIO_ACCOUNT_SID: z.string().min(1),
+  TWILIO_AUTH_TOKEN: z.string().min(1),
+  TWILIO_WHATSAPP_NUMBER: z.string().min(1),
 
   GOOGLE_SHEETS_CREDENTIALS_PATH: z.string().optional(),
   GOOGLE_SHEETS_DEFAULT_SPREADSHEET_ID: z.string().optional(),

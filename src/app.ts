@@ -7,6 +7,7 @@ export function createApp(container: AppContainer): express.Application {
   const app = express();
 
   app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
   app.use(requestLogger);
 
   app.use('/webhook', createWebhookRouter(container.webhookController));

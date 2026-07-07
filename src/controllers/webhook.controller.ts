@@ -1,40 +1,42 @@
 import { Request, Response } from 'express';
 import { MessageHandlerService } from '../services';
-import { WhatsAppWebhookPayload } from '../domain';
-import { WhatsAppClient } from '../integrations';
 import { logger } from '../lib';
 
+interface TwilioWebhookBody {
+  SmsMessageSid: string;
+  NumMedia: string;
+  ProfileName: string;
+  MessageType: string;
+  SmsSid: string;
+  WaId: string;
+  SmsStatus: string;
+  Body: string;
+  To: string;
+  NumSegments: string;
+  ReferralNumMedia: string;
+  MessageSid: string;
+  AccountSid: string;
+  From: string;
+  ApiVersion: string;
+}
+
 export class WebhookController {
-  constructor(
-    private readonly messageHandler: MessageHandlerService,
-    private readonly whatsapp: WhatsAppClient,
-  ) {}
+  constructor(private readonly messageHandler: MessageHandlerService) {}
 
   async handleIncoming(req: Request, res: Response): Promise<void> {
-    res.sendStatus(200);
+    res.status(200).send('<Response></Response>');
 
     try {
-      const payload = req.body as WhatsAppWebhookPayload;
+      const body = req.body as TwilioWebhookBody;
 
-      for (const entry of payload.entry ?? []) {
-        for (const change of entry.changes ?? []) {
-          const messages = change.value.messages ?? [];
-
-          for (const message of messages) {
-            if (message.type !== 'text' || !message.text?.body) {
-              logger.debug('Ignoring non-text message', { type: message.type });
-              continue;
-            }
-
-            await this.whatsapp.markAsRead(message.id);
-
-            await this.messageHandler.handleIncomingMessage(
-              message.from,
-              message.text.body,
-            );
-          }
-        }
+      if (!body.Body || !body.From) {
+        logger.debug('Ignoring webhook without body or sender');
+        return;
       }
+
+      const phone = body.WaId || body.From.replace('whatsapp:', '').replace('+', '');
+
+      await this.messageHandler.handleIncomingMessage(phone, body.Body);
     } catch (error) {
       logger.error('Webhook processing error', { error });
     }
