@@ -16,7 +16,7 @@ export class FamilyService {
 
   async findByName(tenantId: string, name: string): Promise<FamilySearchResult[]> {
     const families = await this.familyRepo.searchFamiliesByName(tenantId, name);
-    
+
     const results: FamilySearchResult[] = [];
 
     for (const family of families) {
@@ -61,7 +61,7 @@ export class FamilyService {
     memberData?: {
       parents?: { firstName: string; email?: string; phoneNumber?: string }[];
       children?: { firstName: string; gardenName?: string }[];
-    }
+    },
   ): Promise<FamilyWithMembers> {
     // Try to find existing family
     const existing = await this.familyRepo.findByTenantAndLastNameWithMembers(tenantId, lastName);
@@ -84,7 +84,7 @@ export class FamilyService {
 
   async addParent(
     _familyId: string,
-    _parentData: { firstName: string; email?: string; phoneNumber?: string }
+    _parentData: { firstName: string; email?: string; phoneNumber?: string },
   ): Promise<Parent> {
     // This would require a ParentRepository method, which we'll create next
     throw new Error('Not implemented yet - need ParentRepository');
@@ -92,7 +92,7 @@ export class FamilyService {
 
   async addChild(
     _familyId: string,
-    _childData: { firstName: string; gardenName?: string }
+    _childData: { firstName: string; gardenName?: string },
   ): Promise<Child> {
     // This would require a ChildRepository method, which we'll create next
     throw new Error('Not implemented yet - need ChildRepository');
@@ -101,20 +101,23 @@ export class FamilyService {
   /**
    * Find a family by any member name (parent or child first name, or family last name)
    */
-  async findFamilyByMemberName(tenantId: string, memberName: string): Promise<FamilyWithMembers | null> {
+  async findFamilyByMemberName(
+    tenantId: string,
+    memberName: string,
+  ): Promise<FamilyWithMembers | null> {
     const results = await this.findByName(tenantId, memberName);
-    
+
     if (results.length === 1) {
       return results[0].family;
     }
-    
+
     if (results.length === 0) {
       return null;
     }
 
     // If multiple matches, prioritize exact matches
-    const exactMatches = results.filter(r => 
-      r.matchedName.toLowerCase() === memberName.toLowerCase()
+    const exactMatches = results.filter(
+      (r) => r.matchedName.toLowerCase() === memberName.toLowerCase(),
     );
 
     if (exactMatches.length === 1) {
@@ -131,24 +134,24 @@ export class FamilyService {
    */
   async getFamilyMemberSuggestions(tenantId: string): Promise<string[]> {
     const families = await this.familyRepo.findByTenantIdWithMembers(tenantId);
-    
+
     const suggestions: string[] = [];
-    
+
     for (const family of families) {
       // Add family last name
       suggestions.push(family.lastName);
-      
+
       // Add parent first names
       for (const parent of family.parents) {
         suggestions.push(parent.firstName);
       }
-      
+
       // Add child first names
       for (const child of family.children) {
         suggestions.push(child.firstName);
       }
     }
-    
+
     return [...new Set(suggestions)].sort(); // Remove duplicates and sort
   }
 }

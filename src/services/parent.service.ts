@@ -28,16 +28,19 @@ export class ParentService {
   async upsertParent(
     familyId: string,
     firstName: string,
-    data: { email?: string; phoneNumber?: string }
+    data: { email?: string; phoneNumber?: string },
   ): Promise<Parent> {
     return this.parentRepo.upsertByFirstName(familyId, firstName, data);
   }
 
-  async updateParent(id: string, data: {
-    firstName?: string;
-    email?: string;
-    phoneNumber?: string;
-  }): Promise<Parent> {
+  async updateParent(
+    id: string,
+    data: {
+      firstName?: string;
+      email?: string;
+      phoneNumber?: string;
+    },
+  ): Promise<Parent> {
     return this.parentRepo.update(id, data);
   }
 

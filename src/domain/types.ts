@@ -31,7 +31,7 @@ export const PAYMENT_METHOD_ALIASES: Record<string, PaymentMethodLabel> = {
 
 export enum MessageType {
   PAYMENT = 'payment',
-  BALANCE_SET = 'balance_set'
+  BALANCE_SET = 'balance_set',
 }
 
 export interface ParsedPaymentMessage {

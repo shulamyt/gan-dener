@@ -26,11 +26,12 @@ model Family {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parents  Parent[]
-  children Child[]
-  payments Payment[]
-  balance  Balance?
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parents        Parent[]
+  children       Child[]
+  payments       Payment[]
+  balance        Balance?
+  balanceHistory BalanceHistory[]
 
   @@unique([tenantId, lastName])
   @@index([tenantId])
@@ -97,6 +98,31 @@ model Balance {
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   @@map("balances")
+}
+
+model BalanceHistory {
+  id             String              @id @default(uuid())
+  familyId       String
+  previousBalance Decimal            @db.Decimal(10, 2)
+  newBalance     Decimal             @db.Decimal(10, 2)
+  changeAmount   Decimal             @db.Decimal(10, 2)
+  changeType     BalanceChangeType
+  changedBy      String?             // Name of person who made the change
+  relatedPaymentId String?           // If related to a payment
+  notes          String?
+  createdAt      DateTime            @default(now())
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([familyId, createdAt])
+  @@map("balance_history")
+}
+
+enum BalanceChangeType {
+  PAYMENT_RECEIVED  // Balance increased due to payment
+  BALANCE_SET       // Balance manually set
+  CORRECTION        // Manual correction/adjustment
 }
 
 enum PaymentMethod {

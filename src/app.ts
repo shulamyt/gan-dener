@@ -1,7 +1,7 @@
 import express from 'express';
 import { AppContainer } from './container';
 import { requestLogger, errorHandler } from './middleware';
-import { createWebhookRouter, createHealthRouter } from './routes';
+import { createWebhookRouter, createHealthRouter, createBalanceHistoryRouter } from './routes';
 
 export function createApp(container: AppContainer): express.Application {
   const app = express();
@@ -12,6 +12,7 @@ export function createApp(container: AppContainer): express.Application {
 
   app.use('/webhook', createWebhookRouter(container.webhookController));
   app.use('/health', createHealthRouter(container.healthController));
+  app.use('/api/balance-history', createBalanceHistoryRouter(container.balanceHistoryController));
 
   app.use(errorHandler);
 

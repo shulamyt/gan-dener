@@ -20,6 +20,21 @@ interface TwilioWebhookBody {
   ApiVersion: string;
 }
 
+function hasProperty<T extends PropertyKey>(obj: object, prop: T): obj is Record<T, unknown> {
+  return prop in obj;
+}
+
+function isTwilioWebhookBody(body: unknown): body is TwilioWebhookBody {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    hasProperty(body, 'Body') &&
+    hasProperty(body, 'From') &&
+    typeof body.Body === 'string' &&
+    typeof body.From === 'string'
+  );
+}
+
 export class WebhookController {
   constructor(private readonly messageHandler: MessageHandlerService) {}
 
@@ -29,17 +44,22 @@ export class WebhookController {
       headers: {
         'content-type': req.headers['content-type'],
         'x-twilio-signature': req.headers['x-twilio-signature'] ? 'present' : 'missing',
-        'user-agent': req.headers['user-agent']
+        'user-agent': req.headers['user-agent'],
       },
       body: req.body,
       method: req.method,
-      url: req.url
+      url: req.url,
     });
 
     res.status(200).send('<Response></Response>');
 
     try {
-      const body = req.body as TwilioWebhookBody;
+      if (!isTwilioWebhookBody(req.body)) {
+        logger.warn('⚠️ Invalid webhook: body does not match expected format');
+        return;
+      }
+
+      const body = req.body;
 
       // Enhanced validation with detailed logging
       if (!body.Body || !body.From) {
@@ -48,7 +68,7 @@ export class WebhookController {
           hasFrom: !!body.From,
           messageType: body.MessageType,
           smsStatus: body.SmsStatus,
-          receivedFields: Object.keys(body)
+          receivedFields: Object.keys(body),
         });
         return;
       }
@@ -56,27 +76,27 @@ export class WebhookController {
       // Extract and log phone number processing
       const rawPhone = body.WaId || body.From;
       const phone = rawPhone.replace('whatsapp:', '').replace('+', '');
-      
+
       logger.info('📱 Processing WhatsApp message', {
         messageId: body.MessageSid || body.SmsMessageSid,
         from: {
           raw: body.From,
           waId: body.WaId,
-          processed: phone
+          processed: phone,
         },
         message: {
           body: body.Body,
           type: body.MessageType,
-          status: body.SmsStatus
+          status: body.SmsStatus,
         },
         profile: {
-          name: body.ProfileName
+          name: body.ProfileName,
         },
         metadata: {
           to: body.To,
           accountSid: body.AccountSid,
-          numSegments: body.NumSegments
-        }
+          numSegments: body.NumSegments,
+        },
       });
 
       // Process the message
@@ -87,17 +107,19 @@ export class WebhookController {
       logger.info('✅ Message processed successfully', {
         messageId: body.MessageSid || body.SmsMessageSid,
         phone,
-        processingTimeMs: processingTime
+        processingTimeMs: processingTime,
       });
-
     } catch (error) {
-      logger.error('❌ Webhook processing error', { 
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        } : error,
-        body: req.body
+      logger.error('❌ Webhook processing error', {
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+              }
+            : error,
+        body: req.body,
       });
     }
   }

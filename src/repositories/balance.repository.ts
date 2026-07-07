@@ -4,8 +4,8 @@ export class BalanceRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findByFamilyId(familyId: string): Promise<Balance | null> {
-    return this.prisma.balance.findUnique({ 
-      where: { familyId } 
+    return this.prisma.balance.findUnique({
+      where: { familyId },
     });
   }
 
@@ -29,26 +29,26 @@ export class BalanceRepository {
 
   async findAllByTenant(tenantId: string): Promise<(Balance & { family: { lastName: string } })[]> {
     return this.prisma.balance.findMany({
-      where: { 
-        family: { tenantId } 
+      where: {
+        family: { tenantId },
       },
-      include: { 
-        family: { 
-          select: { lastName: true } 
-        } 
+      include: {
+        family: {
+          select: { lastName: true },
+        },
       },
       orderBy: {
         family: {
-          lastName: 'asc'
-        }
-      }
+          lastName: 'asc',
+        },
+      },
     });
   }
 
   async create(
-    familyId: string, 
+    familyId: string,
     initialBalance: number = 0,
-    tx?: Prisma.TransactionClient
+    tx?: Prisma.TransactionClient,
   ): Promise<Balance> {
     const client = tx ?? this.prisma;
     return client.balance.create({
@@ -77,22 +77,5 @@ export class BalanceRepository {
     return this.prisma.balance.delete({
       where: { familyId },
     });
-  }
-
-  // Legacy method for backward compatibility
-  async findByChildId(childId: string): Promise<Balance | null> {
-    // Find balance through family relationship
-    const child = await this.prisma.child.findUnique({
-      where: { id: childId },
-      include: {
-        family: {
-          include: {
-            balance: true
-          }
-        }
-      }
-    });
-    
-    return child?.family?.balance || null;
   }
 }

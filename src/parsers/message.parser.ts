@@ -1,4 +1,11 @@
-import { ParsedMessage, ParsedPaymentMessage, ParsedBalanceSetMessage, MessageType, PaymentMethodLabel, PAYMENT_METHOD_ALIASES } from '../domain';
+import {
+  ParsedMessage,
+  ParsedPaymentMessage,
+  ParsedBalanceSetMessage,
+  MessageType,
+  PaymentMethodLabel,
+  PAYMENT_METHOD_ALIASES,
+} from '../domain';
 import { ParseError } from '../domain';
 
 /**
@@ -53,9 +60,9 @@ export class MessageParser {
       const match = text.match(pattern);
       if (match) {
         const name = match[1].trim();
-        let balanceStr = match[2].replace(',', '.');
+        const balanceStr = match[2].replace(',', '.');
         let balance = parseFloat(balanceStr);
-        
+
         // For "חוב של" (debt) patterns, make the balance negative
         if (text.includes('חוב של') && balance > 0) {
           balance = -balance;
@@ -73,7 +80,7 @@ export class MessageParser {
           type: MessageType.BALANCE_SET,
           name,
           balance,
-          notes: undefined
+          notes: undefined,
         };
       }
     }
@@ -103,12 +110,12 @@ export class MessageParser {
     const afterAmount = cleaned.substring(amountIndex + amountMatch[1].length).trim();
     const { paymentMethod, notes } = this.extractPaymentMethod(afterAmount);
 
-    return { 
+    return {
       type: MessageType.PAYMENT,
-      name, 
-      amount, 
-      paymentMethod, 
-      notes: notes || undefined 
+      name,
+      amount,
+      paymentMethod,
+      notes: notes || undefined,
     };
   }
 
@@ -122,9 +129,7 @@ export class MessageParser {
       return { paymentMethod: PaymentMethodLabel.OTHER };
     }
 
-    const sortedAliases = Object.keys(PAYMENT_METHOD_ALIASES).sort(
-      (a, b) => b.length - a.length,
-    );
+    const sortedAliases = Object.keys(PAYMENT_METHOD_ALIASES).sort((a, b) => b.length - a.length);
 
     for (const alias of sortedAliases) {
       if (lowerText.startsWith(alias)) {

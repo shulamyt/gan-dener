@@ -5,7 +5,16 @@ import { PaymentService } from './payment.service';
 import { GoogleSheetsIntegration } from '../integrations/google-sheets.integration';
 import { WhatsAppProvider } from '../integrations/whatsapp.client';
 import { logger } from '../lib';
-import { AppError, ParseError, ChildNotFoundError, TransactionResult, BalanceSetResult, MessageType, ParsedPaymentMessage, ParsedBalanceSetMessage } from '../domain';
+import {
+  AppError,
+  ParseError,
+  ChildNotFoundError,
+  TransactionResult,
+  BalanceSetResult,
+  MessageType,
+  ParsedPaymentMessage,
+  ParsedBalanceSetMessage,
+} from '../domain';
 import { FamilyWithMembers } from '../repositories/family.repository';
 
 export class MessageHandlerService {
@@ -20,12 +29,12 @@ export class MessageHandlerService {
 
   async handleIncomingMessage(fromPhone: string, messageText: string): Promise<void> {
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    logger.info('🔄 Starting message processing', { 
+
+    logger.info('🔄 Starting message processing', {
       messageId,
-      from: fromPhone, 
+      from: fromPhone,
       text: messageText,
-      textLength: messageText.length 
+      textLength: messageText.length,
     });
 
     try {
@@ -37,78 +46,90 @@ export class MessageHandlerService {
       // Step 2: Parse message
       logger.debug('🔍 Parsing message', { messageId, text: messageText });
       const parsed = this.parser.parse(messageText);
-      logger.debug('✅ Message parsed', { 
-        messageId, 
+      logger.debug('✅ Message parsed', {
+        messageId,
         parsed: {
           type: parsed.type,
           name: parsed.name,
-          ...(parsed.type === MessageType.PAYMENT ? {
-            amount: (parsed as any).amount,
-            paymentMethod: (parsed as any).paymentMethod,
-            notes: (parsed as any).notes
-          } : {
-            balance: (parsed as any).balance,
-            notes: (parsed as any).notes
-          })
-        }
+          ...(parsed.type === MessageType.PAYMENT
+            ? {
+                amount: parsed.amount,
+                paymentMethod: parsed.paymentMethod,
+                notes: parsed.notes,
+              }
+            : {
+                balance: parsed.balance,
+                notes: parsed.notes,
+              }),
+        },
       });
 
       // Step 3: Find family by member name (child or parent)
-      logger.debug('👨‍👩‍👧‍👦 Finding family by member name', { messageId, tenantId: tenant.id, memberName: parsed.name });
+      logger.debug('👨‍👩‍👧‍👦 Finding family by member name', {
+        messageId,
+        tenantId: tenant.id,
+        memberName: parsed.name,
+      });
       const family = await this.familyService.findFamilyByMemberName(tenant.id, parsed.name);
-      
+
       if (!family) {
         const suggestions = await this.familyService.getFamilyMemberSuggestions(tenant.id);
         throw new ChildNotFoundError(parsed.name, suggestions);
       }
-      
-      logger.debug('✅ Family found', { messageId, familyId: family.id, familyName: family.lastName });
+
+      logger.debug('✅ Family found', {
+        messageId,
+        familyId: family.id,
+        familyName: family.lastName,
+      });
 
       // Step 4: Process based on message type
       if (parsed.type === MessageType.PAYMENT) {
-        const result = await this.processPayment(messageId, tenant.id, family, parsed as ParsedPaymentMessage);
+        const result = await this.processPayment(messageId, tenant.id, family, parsed);
         const confirmationMessage = this.formatPaymentConfirmation(result);
-        
+
         await this.whatsapp.sendMessage(fromPhone, confirmationMessage);
-        
+
         if (this.sheets) {
           await this.syncToSheets(tenant.id, result).catch((err) => {
             logger.error('❌ Failed to sync to Google Sheets', { messageId, error: err });
           });
         }
 
-        logger.info('🎉 Payment processed successfully', { 
-          messageId, 
+        logger.info('🎉 Payment processed successfully', {
+          messageId,
           paymentId: result.paymentId,
           familyInfo: result.childName,
           amount: result.amount,
-          newBalance: result.newBalance
+          newBalance: result.newBalance,
         });
       } else if (parsed.type === MessageType.BALANCE_SET) {
-        const result = await this.processBalanceSet(messageId, tenant.id, family, parsed as ParsedBalanceSetMessage);
+        const result = await this.processBalanceSet(messageId, tenant.id, family, parsed);
         const confirmationMessage = this.formatBalanceSetConfirmation(result);
-        
+
         await this.whatsapp.sendMessage(fromPhone, confirmationMessage);
 
-        logger.info('🎉 Balance set successfully', { 
-          messageId, 
+        logger.info('🎉 Balance set successfully', {
+          messageId,
           familyName: result.familyName,
           oldBalance: result.oldBalance,
           newBalance: result.newBalance,
-          setBy: result.setBy
+          setBy: result.setBy,
         });
       }
-      
     } catch (error) {
-      logger.error('❌ Error processing message', { 
+      logger.error('❌ Error processing message', {
         messageId,
         from: fromPhone,
         text: messageText,
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        } : error
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+              }
+            : error,
       });
 
       // Send error reply
@@ -118,15 +139,18 @@ export class MessageHandlerService {
         await this.whatsapp.sendMessage(fromPhone, reply);
         logger.debug('✅ Error reply sent', { messageId });
       } catch (replyError) {
-        logger.error('❌ Failed to send error reply', { 
+        logger.error('❌ Failed to send error reply', {
           messageId,
           to: fromPhone,
           originalError: error,
-          replyError: replyError instanceof Error ? {
-            message: replyError.message,
-            stack: replyError.stack,
-            name: replyError.name
-          } : replyError
+          replyError:
+            replyError instanceof Error
+              ? {
+                  message: replyError.message,
+                  stack: replyError.stack,
+                  name: replyError.name,
+                }
+              : replyError,
         });
       }
     }
@@ -134,11 +158,11 @@ export class MessageHandlerService {
 
   private async processPayment(
     messageId: string,
-    tenantId: string, 
-    family: FamilyWithMembers, 
-    parsed: ParsedPaymentMessage
+    tenantId: string,
+    family: FamilyWithMembers,
+    parsed: ParsedPaymentMessage,
   ): Promise<TransactionResult> {
-    logger.debug('💰 Recording payment for family', { 
+    logger.debug('💰 Recording payment for family', {
       messageId,
       payment: {
         tenantId,
@@ -146,10 +170,10 @@ export class MessageHandlerService {
         familyName: family.lastName,
         paidFor: parsed.name,
         amount: parsed.amount,
-        paymentMethod: parsed.paymentMethod
-      }
+        paymentMethod: parsed.paymentMethod,
+      },
     });
-    
+
     const result = await this.paymentService.recordPaymentForFamily({
       tenantId,
       familyId: family.id,
@@ -159,11 +183,11 @@ export class MessageHandlerService {
       paymentMethod: parsed.paymentMethod,
       notes: parsed.notes,
     });
-    
-    logger.debug('✅ Payment recorded', { 
-      messageId, 
+
+    logger.debug('✅ Payment recorded', {
+      messageId,
       paymentId: result.paymentId,
-      newBalance: result.newBalance 
+      newBalance: result.newBalance,
     });
 
     return result;
@@ -171,21 +195,21 @@ export class MessageHandlerService {
 
   private async processBalanceSet(
     messageId: string,
-    tenantId: string, 
-    family: FamilyWithMembers, 
-    parsed: ParsedBalanceSetMessage
+    tenantId: string,
+    family: FamilyWithMembers,
+    parsed: ParsedBalanceSetMessage,
   ): Promise<BalanceSetResult> {
-    logger.debug('⚖️ Setting balance for family', { 
+    logger.debug('⚖️ Setting balance for family', {
       messageId,
       balanceSet: {
         tenantId,
         familyId: family.id,
         familyName: family.lastName,
         newBalance: parsed.balance,
-        setBy: parsed.name
-      }
+        setBy: parsed.name,
+      },
     });
-    
+
     const result = await this.paymentService.setFamilyBalance({
       familyId: family.id,
       familyName: family.lastName,
@@ -193,12 +217,12 @@ export class MessageHandlerService {
       setBy: parsed.name,
       notes: parsed.notes,
     });
-    
-    logger.debug('✅ Balance set', { 
-      messageId, 
+
+    logger.debug('✅ Balance set', {
+      messageId,
       familyName: result.familyName,
       oldBalance: result.oldBalance,
-      newBalance: result.newBalance
+      newBalance: result.newBalance,
     });
 
     return result;
@@ -221,7 +245,9 @@ export class MessageHandlerService {
       `  יתרה קודמת: ${result.oldBalance}₪`,
       `  יתרה חדשה: ${result.newBalance}₪`,
       result.setBy ? `  עודכן על ידי: ${result.setBy}` : '',
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
   }
 
   private formatErrorReply(error: unknown): string {
@@ -249,17 +275,14 @@ export class MessageHandlerService {
     return 'אירעה שגיאה. נסו שוב מאוחר יותר.';
   }
 
-  private async syncToSheets(
-    _tenantId: string,
-    result: TransactionResult,
-  ): Promise<void> {
+  private async syncToSheets(_tenantId: string, result: TransactionResult): Promise<void> {
     if (!this.sheets) return;
-      await this.sheets.appendPaymentRow({
-        date: new Date().toISOString(),
-        childName: result.childName, // This now contains family + member info
-        amount: result.amount,
-        paymentMethod: result.paymentMethod,
-        balance: result.newBalance,
-      });
+    await this.sheets.appendPaymentRow({
+      date: new Date().toISOString(),
+      childName: result.childName, // This now contains family + member info
+      amount: result.amount,
+      paymentMethod: result.paymentMethod,
+      balance: result.newBalance,
+    });
   }
 }

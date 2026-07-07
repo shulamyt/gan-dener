@@ -36,8 +36,8 @@ export class FamilyRepository {
   }
 
   async findByTenantAndLastNameWithMembers(
-    tenantId: string, 
-    lastName: string
+    tenantId: string,
+    lastName: string,
   ): Promise<FamilyWithMembers | null> {
     return this.prisma.family.findUnique({
       where: {
@@ -112,10 +112,7 @@ export class FamilyRepository {
     });
   }
 
-  async create(data: {
-    tenantId: string;
-    lastName: string;
-  }): Promise<Family> {
+  async create(data: { tenantId: string; lastName: string }): Promise<Family> {
     return this.prisma.family.create({
       data,
     });

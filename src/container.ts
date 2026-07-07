@@ -6,16 +6,12 @@ import {
   FamilyRepository,
   PaymentRepository,
   BalanceRepository,
+  BalanceHistoryRepository,
 } from './repositories';
 import { MessageParser } from './parsers';
-import { 
-  TenantService, 
-  FamilyService, 
-  PaymentService, 
-  MessageHandlerService 
-} from './services';
+import { TenantService, FamilyService, PaymentService, MessageHandlerService } from './services';
 import { TwilioWhatsAppClient, GoogleSheetsIntegration } from './integrations';
-import { WebhookController, HealthController } from './controllers';
+import { WebhookController, HealthController, BalanceHistoryController } from './controllers';
 
 export interface AppContainer {
   prisma: PrismaClient;
@@ -23,6 +19,7 @@ export interface AppContainer {
   messageHandler: MessageHandlerService;
   webhookController: WebhookController;
   healthController: HealthController;
+  balanceHistoryController: BalanceHistoryController;
 }
 
 export function createContainer(): AppContainer {
@@ -32,12 +29,13 @@ export function createContainer(): AppContainer {
   const familyRepo = new FamilyRepository(prisma);
   const paymentRepo = new PaymentRepository(prisma);
   const balanceRepo = new BalanceRepository(prisma);
+  const balanceHistoryRepo = new BalanceHistoryRepository(prisma);
 
   const parser = new MessageParser();
 
   const tenantService = new TenantService(tenantRepo);
   const familyService = new FamilyService(familyRepo);
-  const paymentService = new PaymentService(prisma, paymentRepo, balanceRepo);
+  const paymentService = new PaymentService(prisma, paymentRepo, balanceRepo, balanceHistoryRepo);
 
   const whatsappClient = new TwilioWhatsAppClient(
     env.TWILIO_ACCOUNT_SID,
@@ -49,7 +47,7 @@ export function createContainer(): AppContainer {
   logger.info('📱 WhatsApp client configured', {
     accountSid: `${env.TWILIO_ACCOUNT_SID.substring(0, 8)}...${env.TWILIO_ACCOUNT_SID.slice(-4)}`,
     whatsappNumber: env.TWILIO_WHATSAPP_NUMBER,
-    hasAuthToken: !!env.TWILIO_AUTH_TOKEN
+    hasAuthToken: !!env.TWILIO_AUTH_TOKEN,
   });
 
   let sheetsIntegration: GoogleSheetsIntegration | null = null;
@@ -71,6 +69,7 @@ export function createContainer(): AppContainer {
 
   const webhookController = new WebhookController(messageHandler);
   const healthController = new HealthController();
+  const balanceHistoryController = new BalanceHistoryController(paymentService);
 
   return {
     prisma,
@@ -78,5 +77,6 @@ export function createContainer(): AppContainer {
     messageHandler,
     webhookController,
     healthController,
+    balanceHistoryController,
   };
 }

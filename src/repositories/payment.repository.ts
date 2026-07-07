@@ -44,13 +44,13 @@ export class PaymentRepository {
       orderBy: { date: 'desc' },
       take: options?.limit ?? 50,
       skip: options?.offset ?? 0,
-      include: { 
+      include: {
         family: {
           include: {
             parents: true,
             children: true,
-          }
-        }
+          },
+        },
       },
     });
   }
@@ -59,32 +59,29 @@ export class PaymentRepository {
     return this.prisma.payment.findMany({
       where: { familyId },
       orderBy: { date: 'desc' },
-      include: { 
+      include: {
         family: {
           include: {
             parents: true,
             children: true,
-          }
-        }
+          },
+        },
       },
     });
   }
 
-  async findRecentByTenant(
-    tenantId: string, 
-    limit: number = 10
-  ): Promise<Payment[]> {
+  async findRecentByTenant(tenantId: string, limit: number = 10): Promise<Payment[]> {
     return this.prisma.payment.findMany({
       where: { tenantId },
       orderBy: { date: 'desc' },
       take: limit,
-      include: { 
+      include: {
         family: {
           include: {
             parents: true,
             children: true,
-          }
-        }
+          },
+        },
       },
     });
   }
@@ -94,7 +91,7 @@ export class PaymentRepository {
       where: { familyId },
       _sum: { amount: true },
     });
-    
+
     return result._sum.amount?.toNumber() ?? 0;
   }
 
@@ -103,20 +100,7 @@ export class PaymentRepository {
       where: { tenantId },
       _sum: { amount: true },
     });
-    
-    return result._sum.amount?.toNumber() ?? 0;
-  }
 
-  // Legacy method for backward compatibility
-  async findByChild(childId: string): Promise<Payment[]> {
-    // Find payments through family relationship
-    const child = await this.prisma.child.findUnique({
-      where: { id: childId },
-      select: { familyId: true }
-    });
-    
-    if (!child) return [];
-    
-    return this.findByFamily(child.familyId);
+    return result._sum.amount?.toNumber() ?? 0;
   }
 }
