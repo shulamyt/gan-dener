@@ -18,15 +18,51 @@ export class MessageHandlerService {
   ) {}
 
   async handleIncomingMessage(fromPhone: string, messageText: string): Promise<void> {
-    logger.info('Processing message', { from: fromPhone, text: messageText });
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    logger.info('🔄 Starting message processing', { 
+      messageId,
+      from: fromPhone, 
+      text: messageText,
+      textLength: messageText.length 
+    });
 
     try {
+      // Step 1: Get or create tenant
+      logger.debug('📋 Getting tenant', { messageId, phone: fromPhone });
       const tenant = await this.tenantService.getOrCreate(fromPhone);
+      logger.debug('✅ Tenant resolved', { messageId, tenantId: tenant.id, isNew: !tenant.id });
 
+      // Step 2: Parse message
+      logger.debug('🔍 Parsing message', { messageId, text: messageText });
       const parsed = this.parser.parse(messageText);
+      logger.debug('✅ Message parsed', { 
+        messageId, 
+        parsed: {
+          name: parsed.name,
+          amount: parsed.amount,
+          paymentMethod: parsed.paymentMethod,
+          notes: parsed.notes
+        }
+      });
 
+      // Step 3: Find child
+      logger.debug('👶 Finding child', { messageId, tenantId: tenant.id, childName: parsed.name });
       const child = await this.childService.findByName(tenant.id, parsed.name);
+      logger.debug('✅ Child found', { messageId, childId: child.id, childName: child.name });
 
+      // Step 4: Record payment
+      logger.debug('💰 Recording payment', { 
+        messageId,
+        payment: {
+          tenantId: tenant.id,
+          childId: child.id,
+          childName: child.name,
+          amount: parsed.amount,
+          paymentMethod: parsed.paymentMethod
+        }
+      });
+      
       const result = await this.paymentService.recordPayment({
         tenantId: tenant.id,
         childId: child.id,
@@ -35,20 +71,73 @@ export class MessageHandlerService {
         paymentMethod: parsed.paymentMethod,
         notes: parsed.notes,
       });
+      
+      logger.debug('✅ Payment recorded', { 
+        messageId, 
+        paymentId: result.paymentId,
+        newBalance: result.newBalance 
+      });
 
-      await this.whatsapp.sendMessage(fromPhone, this.formatConfirmation(result));
+      // Step 5: Send confirmation
+      const confirmationMessage = this.formatConfirmation(result);
+      logger.debug('📤 Sending confirmation', { 
+        messageId, 
+        to: fromPhone,
+        message: confirmationMessage 
+      });
+      
+      await this.whatsapp.sendMessage(fromPhone, confirmationMessage);
+      logger.debug('✅ Confirmation sent', { messageId });
 
+      // Step 6: Sync to sheets (if configured)
       if (this.sheets) {
+        logger.debug('📊 Syncing to Google Sheets', { messageId });
         await this.syncToSheets(tenant.id, result).catch((err) => {
-          logger.error('Failed to sync to Google Sheets', { error: err });
+          logger.error('❌ Failed to sync to Google Sheets', { messageId, error: err });
         });
+        logger.debug('✅ Synced to Google Sheets', { messageId });
+      } else {
+        logger.debug('📊 Google Sheets not configured, skipping sync', { messageId });
       }
 
-      logger.info('Message processed successfully', { paymentId: result.paymentId });
+      logger.info('🎉 Message processed successfully', { 
+        messageId, 
+        paymentId: result.paymentId,
+        childName: result.childName,
+        amount: result.amount,
+        newBalance: result.newBalance
+      });
+      
     } catch (error) {
-      const reply = this.formatErrorReply(error);
-      await this.whatsapp.sendMessage(fromPhone, reply);
-      logger.error('Error processing message', { error, from: fromPhone });
+      logger.error('❌ Error processing message', { 
+        messageId,
+        from: fromPhone,
+        text: messageText,
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error
+      });
+
+      // Send error reply
+      try {
+        const reply = this.formatErrorReply(error);
+        logger.debug('📤 Sending error reply', { messageId, to: fromPhone, reply });
+        await this.whatsapp.sendMessage(fromPhone, reply);
+        logger.debug('✅ Error reply sent', { messageId });
+      } catch (replyError) {
+        logger.error('❌ Failed to send error reply', { 
+          messageId,
+          to: fromPhone,
+          originalError: error,
+          replyError: replyError instanceof Error ? {
+            message: replyError.message,
+            stack: replyError.stack,
+            name: replyError.name
+          } : replyError
+        });
+      }
     }
   }
 

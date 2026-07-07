@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { getPrismaClient } from './lib';
+import { getPrismaClient, logger } from './lib';
 import { env } from './config';
 import {
   TenantRepository,
@@ -39,6 +39,13 @@ export function createContainer(): AppContainer {
     env.TWILIO_AUTH_TOKEN,
     env.TWILIO_WHATSAPP_NUMBER,
   );
+
+  // Log WhatsApp configuration (without sensitive data)
+  logger.info('📱 WhatsApp client configured', {
+    accountSid: `${env.TWILIO_ACCOUNT_SID.substring(0, 8)}...${env.TWILIO_ACCOUNT_SID.slice(-4)}`,
+    whatsappNumber: env.TWILIO_WHATSAPP_NUMBER,
+    hasAuthToken: !!env.TWILIO_AUTH_TOKEN
+  });
 
   let sheetsIntegration: GoogleSheetsIntegration | null = null;
   if (env.GOOGLE_SHEETS_CREDENTIALS_PATH && env.GOOGLE_SHEETS_DEFAULT_SPREADSHEET_ID) {
