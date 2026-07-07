@@ -3,12 +3,17 @@ import { getPrismaClient, logger } from './lib';
 import { env } from './config';
 import {
   TenantRepository,
-  ChildRepository,
+  FamilyRepository,
   PaymentRepository,
   BalanceRepository,
 } from './repositories';
 import { MessageParser } from './parsers';
-import { TenantService, ChildService, PaymentService, MessageHandlerService } from './services';
+import { 
+  TenantService, 
+  FamilyService, 
+  PaymentService, 
+  MessageHandlerService 
+} from './services';
 import { TwilioWhatsAppClient, GoogleSheetsIntegration } from './integrations';
 import { WebhookController, HealthController } from './controllers';
 
@@ -24,14 +29,14 @@ export function createContainer(): AppContainer {
   const prisma = getPrismaClient();
 
   const tenantRepo = new TenantRepository(prisma);
-  const childRepo = new ChildRepository(prisma);
+  const familyRepo = new FamilyRepository(prisma);
   const paymentRepo = new PaymentRepository(prisma);
   const balanceRepo = new BalanceRepository(prisma);
 
   const parser = new MessageParser();
 
   const tenantService = new TenantService(tenantRepo);
-  const childService = new ChildService(childRepo);
+  const familyService = new FamilyService(familyRepo);
   const paymentService = new PaymentService(prisma, paymentRepo, balanceRepo);
 
   const whatsappClient = new TwilioWhatsAppClient(
@@ -58,7 +63,7 @@ export function createContainer(): AppContainer {
   const messageHandler = new MessageHandlerService(
     parser,
     tenantService,
-    childService,
+    familyService,
     paymentService,
     whatsappClient,
     sheetsIntegration,

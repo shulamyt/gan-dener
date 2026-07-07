@@ -29,12 +29,27 @@ export const PAYMENT_METHOD_ALIASES: Record<string, PaymentMethodLabel> = {
   צק: PaymentMethodLabel.CHECK,
 };
 
-export interface ParsedMessage {
+export enum MessageType {
+  PAYMENT = 'payment',
+  BALANCE_SET = 'balance_set'
+}
+
+export interface ParsedPaymentMessage {
+  type: MessageType.PAYMENT;
   name: string;
   amount: number;
   paymentMethod: PaymentMethodLabel;
   notes?: string;
 }
+
+export interface ParsedBalanceSetMessage {
+  type: MessageType.BALANCE_SET;
+  name: string;
+  balance: number;
+  notes?: string;
+}
+
+export type ParsedMessage = ParsedPaymentMessage | ParsedBalanceSetMessage;
 
 export interface TransactionResult {
   paymentId: string;
@@ -42,4 +57,11 @@ export interface TransactionResult {
   amount: number;
   paymentMethod: string;
   newBalance: number;
+}
+
+export interface BalanceSetResult {
+  familyName: string;
+  oldBalance: number;
+  newBalance: number;
+  setBy?: string;
 }

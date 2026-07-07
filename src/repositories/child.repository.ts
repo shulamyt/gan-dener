@@ -3,30 +3,116 @@ import { PrismaClient, Child } from '@prisma/client';
 export class ChildRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findByTenantAndName(tenantId: string, name: string): Promise<Child | null> {
+  async findByFamilyAndFirstName(familyId: string, firstName: string): Promise<Child | null> {
     return this.prisma.child.findUnique({
-      where: { tenantId_name: { tenantId, name } },
+      where: { 
+        familyId_firstName: { 
+          familyId, 
+          firstName 
+        } 
+      },
     });
   }
 
-  async findByTenantId(tenantId: string): Promise<Child[]> {
+  async findByFamilyId(familyId: string): Promise<Child[]> {
     return this.prisma.child.findMany({
-      where: { tenantId },
-      include: { parent: true, balance: true },
+      where: { familyId },
+      orderBy: { firstName: 'asc' }
     });
   }
 
-  async create(data: { tenantId: string; parentId: string; name: string }): Promise<Child> {
+  async searchByFirstName(familyId: string, firstName: string): Promise<Child[]> {
+    return this.prisma.child.findMany({
+      where: {
+        familyId,
+        firstName: {
+          contains: firstName,
+          mode: 'insensitive',
+        },
+      },
+      orderBy: { firstName: 'asc' }
+    });
+  }
+
+  async create(data: { 
+    familyId: string; 
+    firstName: string; 
+    gardenName?: string; 
+  }): Promise<Child> {
     return this.prisma.child.create({ data });
   }
 
-  async searchByName(tenantId: string, nameFragment: string): Promise<Child[]> {
+  async upsertByFirstName(
+    familyId: string, 
+    firstName: string, 
+    data: { gardenName?: string }
+  ): Promise<Child> {
+    return this.prisma.child.upsert({
+      where: { 
+        familyId_firstName: { 
+          familyId, 
+          firstName 
+        } 
+      },
+      create: { 
+        familyId, 
+        firstName, 
+        gardenName: data.gardenName 
+      },
+      update: { 
+        gardenName: data.gardenName ?? undefined 
+      },
+    });
+  }
+
+  async update(id: string, data: {
+    firstName?: string;
+    gardenName?: string;
+  }): Promise<Child> {
+    return this.prisma.child.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async delete(id: string): Promise<Child> {
+    return this.prisma.child.delete({
+      where: { id },
+    });
+  }
+
+  // Legacy methods for backward compatibility during migration
+  async findByTenantId(tenantId: string): Promise<Child[]> {
+    // This method finds all children across all families for a tenant
     return this.prisma.child.findMany({
       where: {
-        tenantId,
-        name: { contains: nameFragment, mode: 'insensitive' },
+        family: {
+          tenantId
+        }
       },
-      include: { parent: true },
+      include: {
+        family: true
+      },
+      orderBy: { firstName: 'asc' }
+    });
+  }
+
+  async searchByName(tenantId: string, nameFragment: string): Promise<Child[]> {
+    // This method searches across all families for a tenant
+    return this.prisma.child.findMany({
+      where: {
+        family: {
+          tenantId
+        },
+        firstName: { 
+          contains: nameFragment, 
+          mode: 'insensitive' 
+        },
+      },
+      include: {
+        family: true
+      },
+      orderBy: { firstName: 'asc' }
     });
   }
 }
