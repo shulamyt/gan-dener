@@ -1,24 +1,28 @@
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" npx prisma generate
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
-
+# Use Node.js LTS version
 FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/dist ./dist
-COPY prisma ./prisma
-COPY prisma.config.ts ./
 
+# Copy package files
+COPY package*.json ./
+COPY client/package*.json ./client/
+
+# Install dependencies
+RUN npm install
+RUN cd client && npm install
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Expose port
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+
+# Set environment
+ENV NODE_ENV=production
+
+# Start the application
+CMD ["npm", "start"]
