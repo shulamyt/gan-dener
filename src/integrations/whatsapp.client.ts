@@ -12,6 +12,31 @@ export class TwilioWhatsAppClient implements WhatsAppProvider {
   constructor(accountSid: string, authToken: string, fromNumber: string) {
     this.client = twilio(accountSid, authToken);
     this.fromNumber = fromNumber;
+    
+    // Validate WhatsApp sender configuration on startup
+    this.validateWhatsAppSender().catch(error => {
+      logger.warn('⚠️ WhatsApp sender validation failed', { 
+        fromNumber: this.fromNumber,
+        error: error instanceof Error ? error.message : error,
+        suggestion: 'Check Twilio Console → Messaging → Senders → WhatsApp senders'
+      });
+    });
+  }
+
+  private async validateWhatsAppSender(): Promise<void> {
+    try {
+      // Try to get WhatsApp senders to validate configuration
+      const senders = await this.client.messaging.v1.services.list({ limit: 1 });
+      logger.info('✅ Twilio client initialized', { 
+        fromNumber: this.fromNumber,
+        servicesFound: senders.length
+      });
+    } catch (error) {
+      logger.warn('Could not validate WhatsApp configuration', { 
+        fromNumber: this.fromNumber,
+        error: error instanceof Error ? error.message : error
+      });
+    }
   }
 
   async sendMessage(to: string, text: string): Promise<void> {
