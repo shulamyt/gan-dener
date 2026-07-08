@@ -16,7 +16,9 @@ RUN cd client && npm install
 COPY . .
 
 # Generate Prisma client (must run before tsc so types are available)
-RUN npx prisma generate
+# DATABASE_URL is not actually used during generate; it's only needed at runtime.
+# Prisma 7 eagerly validates env vars from prisma.config.ts, so we pass a dummy value.
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 
 # Build the application
 RUN npm run build
