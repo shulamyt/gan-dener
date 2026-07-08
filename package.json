@@ -4,7 +4,7 @@
   "description": "WhatsApp-based payment management SaaS for kindergarten managers",
   "main": "dist/main.js",
   "scripts": {
-    "build": "npm run build:client && tsc",
+    "build": "npm run build:client && npx prisma generate && tsc",
     "build:client": "cd client && npm install && npm run build",
     "start": "node dist/main.js",
     "dev": "tsx watch src/main.ts",
