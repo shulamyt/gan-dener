@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePayments, useCreatePayment, useFamilies } from '../hooks/useApi'
+import { usePayments, useFamilies } from '../hooks/useApi'
 import { format } from 'date-fns'
 import { 
   CreditCard, 
@@ -13,11 +13,8 @@ import {
 export function Payments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamily, setSelectedFamily] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  
   const { data: payments, isLoading, error } = usePayments({ limit: 100 })
   const { data: families } = useFamilies()
-  const createPayment = useCreatePayment()
 
   const filteredPayments = payments?.filter(payment => {
     const matchesSearch = payment.child?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,10 +74,7 @@ export function Payments() {
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="btn-primary flex items-center space-x-2"
-          >
+          <button className="btn-primary flex items-center space-x-2">
             <Plus className="h-4 w-4" />
             <span>Record Payment</span>
           </button>
@@ -161,10 +155,7 @@ export function Payments() {
             <p className="text-gray-500 mb-4">
               {searchTerm || selectedFamily ? 'No payments found matching your filters' : 'No payments recorded yet'}
             </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="btn-primary"
-            >
+            <button className="btn-primary">
               Record First Payment
             </button>
           </div>

@@ -7,6 +7,7 @@ import {
   PaymentRepository,
   BalanceRepository,
   BalanceHistoryRepository,
+  ChildRepository,
 } from './repositories';
 import { MessageParser } from './parsers';
 import { TenantService, FamilyService, PaymentService, MessageHandlerService } from './services';
@@ -20,6 +21,9 @@ export interface AppContainer {
   webhookController: WebhookController;
   healthController: HealthController;
   balanceHistoryController: BalanceHistoryController;
+  familyRepository: FamilyRepository;
+  childRepository: ChildRepository;
+  paymentRepository: PaymentRepository;
 }
 
 export function createContainer(): AppContainer {
@@ -27,6 +31,7 @@ export function createContainer(): AppContainer {
 
   const tenantRepo = new TenantRepository(prisma);
   const familyRepo = new FamilyRepository(prisma);
+  const childRepo = new ChildRepository(prisma);
   const paymentRepo = new PaymentRepository(prisma);
   const balanceRepo = new BalanceRepository(prisma);
   const balanceHistoryRepo = new BalanceHistoryRepository(prisma);
@@ -78,5 +83,8 @@ export function createContainer(): AppContainer {
     webhookController,
     healthController,
     balanceHistoryController,
+    familyRepository: familyRepo,
+    childRepository: childRepo,
+    paymentRepository: paymentRepo,
   };
 }

@@ -103,4 +103,19 @@ export class PaymentRepository {
 
     return result._sum.amount?.toNumber() ?? 0;
   }
+
+  async findAll(options?: { 
+    limit?: number; 
+    offset?: number; 
+    sortBy?: string; 
+    sortOrder?: 'asc' | 'desc' 
+  }): Promise<Payment[]> {
+    return this.prisma.payment.findMany({
+      take: options?.limit ?? 50,
+      skip: options?.offset ?? 0,
+      orderBy: { 
+        [options?.sortBy ?? 'date']: options?.sortOrder ?? 'desc' 
+      },
+    });
+  }
 }

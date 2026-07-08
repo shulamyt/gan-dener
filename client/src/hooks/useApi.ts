@@ -6,7 +6,7 @@ import {
   balanceHistoryApi, 
   dashboardApi 
 } from '../services/api'
-import type { Family, Child, Payment, BalanceHistory } from '../types'
+import type { Family, Child, Payment } from '../types'
 
 // Dashboard hooks
 export function useDashboardStats() {

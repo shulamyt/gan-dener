@@ -34,7 +34,7 @@ export function createApp(container: AppContainer): express.Application {
 
   // API routes
   app.use('/webhook', createWebhookRouter(container.webhookController));
-  app.use('/health', createHealthRouter(container.healthController));
+  app.use('/health', createHealthRouter());
   app.use('/api', createApiRouter(container));
   app.use('/api/balance-history', createBalanceHistoryRouter(container.balanceHistoryController));
 
@@ -61,7 +61,7 @@ export function createApp(container: AppContainer): express.Application {
     });
   } else {
     // Development root route
-    app.get('/', (req, res) => {
+    app.get('/', (_, res) => {
       res.json({ 
         message: 'Gan Dener API - Development Mode', 
         frontend: 'http://localhost:3002',

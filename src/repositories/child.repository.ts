@@ -79,4 +79,16 @@ export class ChildRepository {
       where: { id },
     });
   }
+
+  async findAll(): Promise<Child[]> {
+    return this.prisma.child.findMany({
+      orderBy: { firstName: 'asc' },
+    });
+  }
+
+  async findById(id: string): Promise<Child | null> {
+    return this.prisma.child.findUnique({
+      where: { id },
+    });
+  }
 }

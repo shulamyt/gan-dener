@@ -5,7 +5,7 @@ export function createApiRouter(container: AppContainer): Router {
   const router = Router();
 
   // Dashboard endpoint
-  router.get('/dashboard/stats', async (req, res) => {
+  router.get('/dashboard/stats', async (_, res) => {
     try {
       const familyRepository = container.familyRepository;
       const childRepository = container.childRepository;
@@ -14,24 +14,20 @@ export function createApiRouter(container: AppContainer): Router {
       // Get basic stats
       const families = await familyRepository.findAll();
       const children = await childRepository.findAll();
-      
-      // Get today's date range
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
       // Get recent payments (last 10)
       const recentPayments = await paymentRepository.findAll({
         limit: 10,
         offset: 0,
-        sortBy: 'created_at',
+        sortBy: 'createdAt',
         sortOrder: 'desc'
       });
 
       // Calculate stats
       const totalFamilies = families.length;
       const totalChildren = children.length;
-      const totalBalance = families.reduce((sum, family) => sum + family.balance, 0);
+      // For demo purposes since balance is not in family model currently
+      const totalBalance = 0;
       
       // For demo purposes, we'll simulate today's payments
       const todayPayments = Math.floor(Math.random() * 5);
@@ -43,16 +39,17 @@ export function createApiRouter(container: AppContainer): Router {
         totalBalance,
         todayPayments,
         todayAmount,
-        recentPayments: recentPayments.map(payment => ({
+        recentPayments: recentPayments.map((payment: any) => ({
           ...payment,
-          child: { name: `Child ${payment.child_id}` } // Simplified for demo
+          amount: payment.amount.toNumber(), // Convert Decimal to number
+          child: { name: payment.paidFor || 'Unknown' } // Use paidFor field
         }))
       };
 
-      res.json({ success: true, data: stats });
+      return res.json({ success: true, data: stats });
     } catch (error) {
       console.error('Dashboard stats error:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         message: 'Failed to fetch dashboard stats',
         data: null 
@@ -61,13 +58,13 @@ export function createApiRouter(container: AppContainer): Router {
   });
 
   // Families endpoints
-  router.get('/families', async (req, res) => {
+  router.get('/families', async (_, res) => {
     try {
       const families = await container.familyRepository.findAll();
-      res.json({ success: true, data: families });
+      return res.json({ success: true, data: families });
     } catch (error) {
       console.error('Get families error:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch families', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to fetch families', data: null });
     }
   });
 
@@ -83,7 +80,7 @@ export function createApiRouter(container: AppContainer): Router {
       // Get children for this family
       const children = await container.childRepository.findByFamilyId(id);
       
-      res.json({ 
+      return res.json({ 
         success: true, 
         data: { 
           ...family, 
@@ -92,128 +89,133 @@ export function createApiRouter(container: AppContainer): Router {
       });
     } catch (error) {
       console.error('Get family error:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch family', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to fetch family', data: null });
     }
   });
 
   router.post('/families', async (req, res) => {
     try {
-      const { name, balance = 0, parentPhoneNumber } = req.body;
+      const { lastName, tenantId } = req.body;
       
-      if (!name) {
-        return res.status(400).json({ success: false, message: 'Family name is required', data: null });
+      if (!lastName) {
+        return res.status(400).json({ success: false, message: 'Family last name is required', data: null });
+      }
+
+      if (!tenantId) {
+        return res.status(400).json({ success: false, message: 'Tenant ID is required', data: null });
       }
 
       const family = await container.familyRepository.create({
-        name,
-        balance: balance || 0,
-        parent_phone_number: parentPhoneNumber
+        lastName,
+        tenantId
       });
 
-      res.status(201).json({ success: true, data: family });
+      return res.status(201).json({ success: true, data: family });
     } catch (error) {
       console.error('Create family error:', error);
-      res.status(500).json({ success: false, message: 'Failed to create family', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to create family', data: null });
     }
   });
 
   // Children endpoints
-  router.get('/children', async (req, res) => {
+  router.get('/children', async (_, res) => {
     try {
       const children = await container.childRepository.findAll();
-      res.json({ success: true, data: children });
+      return res.json({ success: true, data: children });
     } catch (error) {
       console.error('Get children error:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch children', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to fetch children', data: null });
     }
   });
 
   router.post('/children', async (req, res) => {
     try {
-      const { name, familyId } = req.body;
+      const { firstName, familyId, gardenName } = req.body;
       
-      if (!name || !familyId) {
+      if (!firstName || !familyId) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Child name and family ID are required', 
+          message: 'Child first name and family ID are required', 
           data: null 
         });
       }
 
       const child = await container.childRepository.create({
-        name,
-        family_id: familyId
+        firstName,
+        familyId,
+        gardenName
       });
 
-      res.status(201).json({ success: true, data: child });
+      return res.status(201).json({ success: true, data: child });
     } catch (error) {
       console.error('Create child error:', error);
-      res.status(500).json({ success: false, message: 'Failed to create child', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to create child', data: null });
     }
   });
 
   // Payments endpoints
   router.get('/payments', async (req, res) => {
     try {
-      const { familyId, childId, limit = 50, offset = 0 } = req.query;
+      const { familyId, limit = 50, offset = 0 } = req.query;
       
       const payments = await container.paymentRepository.findAll({
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),
-        sortBy: 'created_at',
+        sortBy: 'createdAt',
         sortOrder: 'desc'
       });
 
-      // Add child info to payments
-      const paymentsWithChildren = await Promise.all(
-        payments.map(async (payment) => {
-          const child = await container.childRepository.findById(payment.child_id);
-          return {
-            ...payment,
-            child: child ? { id: child.id, name: child.name, familyId: child.family_id } : null
-          };
-        })
-      );
-
-      // Filter by familyId or childId if provided
-      let filteredPayments = paymentsWithChildren;
+      // Filter by familyId if provided
+      let filteredPayments = payments;
       if (familyId) {
-        filteredPayments = filteredPayments.filter(p => p.child?.familyId === familyId);
-      }
-      if (childId) {
-        filteredPayments = filteredPayments.filter(p => p.child_id === childId);
+        filteredPayments = payments.filter(p => p.familyId === familyId);
       }
 
-      res.json({ success: true, data: filteredPayments });
+      // Convert payments to expected format
+      const formattedPayments = filteredPayments.map((payment: any) => ({
+        ...payment,
+        amount: payment.amount.toNumber(), // Convert Decimal to number
+        child: { name: payment.paidFor || 'Unknown' } // Use paidFor field as child name
+      }));
+
+      return res.json({ success: true, data: formattedPayments });
     } catch (error) {
       console.error('Get payments error:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch payments', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to fetch payments', data: null });
     }
   });
 
   router.post('/payments', async (req, res) => {
     try {
-      const { childId, amount, paymentMethod, notes } = req.body;
+      const { familyId, amount, paymentMethod, notes, paidFor, tenantId } = req.body;
       
-      if (!childId || !amount || !paymentMethod) {
+      if (!familyId || !amount || !paymentMethod || !tenantId) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Child ID, amount, and payment method are required', 
+          message: 'Family ID, amount, payment method, and tenant ID are required', 
           data: null 
         });
       }
 
       const payment = await container.paymentRepository.create({
-        child_id: childId,
+        familyId,
         amount: parseFloat(amount),
-        payment_method: paymentMethod,
-        notes
+        paymentMethod,
+        notes,
+        paidFor,
+        tenantId
       });
 
-      res.status(201).json({ success: true, data: payment });
+      return res.status(201).json({ 
+        success: true, 
+        data: {
+          ...payment,
+          amount: payment.amount.toNumber() // Convert Decimal to number
+        }
+      });
     } catch (error) {
       console.error('Create payment error:', error);
-      res.status(500).json({ success: false, message: 'Failed to create payment', data: null });
+      return res.status(500).json({ success: false, message: 'Failed to create payment', data: null });
     }
   });
 

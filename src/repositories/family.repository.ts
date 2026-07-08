@@ -154,4 +154,10 @@ export class FamilyRepository {
       where: { id },
     });
   }
+
+  async findAll(): Promise<Family[]> {
+    return this.prisma.family.findMany({
+      orderBy: { lastName: 'asc' },
+    });
+  }
 }

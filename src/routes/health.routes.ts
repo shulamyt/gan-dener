@@ -2,10 +2,10 @@ import { Router } from 'express';
 import path from 'path';
 import fs from 'fs';
 
-export function createHealthRouter(healthController?: any): Router {
+export function createHealthRouter(): Router {
   const router = Router();
 
-  router.get('/', (req, res) => {
+  router.get('/', (_, res) => {
     const clientBuildExists = process.env.NODE_ENV === 'production' 
       ? fs.existsSync(path.join(__dirname, '../../client/dist/index.html'))
       : false;
