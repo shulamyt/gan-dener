@@ -15,6 +15,9 @@ RUN cd client && npm install
 # Copy source code
 COPY . .
 
+# Generate Prisma client (must run before tsc so types are available)
+RUN npx prisma generate
+
 # Build the application
 RUN npm run build
 
