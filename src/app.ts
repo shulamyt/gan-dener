@@ -46,7 +46,7 @@ export function createApp(container: AppContainer): express.Application {
     app.use(express.static(clientBuildPath));
     
     // Serve React app for all non-API routes (SPA fallback)
-    app.get('*', (req, res, next) => {
+    app.get('/*splat', (req, res, next) => {
       // Skip if it's an API route
       if (req.path.startsWith('/api') || req.path.startsWith('/webhook') || req.path.startsWith('/health')) {
         return next();
